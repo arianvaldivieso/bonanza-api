@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Collection;
-use Illuminate\Http\Request;
-
 use Automattic\WooCommerce\Client;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class ImportController extends Controller
 {
@@ -91,6 +91,8 @@ class ImportController extends Controller
                $wc_product = $woocommerce->get('products?sku='.urlencode($product['sku']))[0];
 
                $woocommerce->put('products/'.$wc_product->id, $product);
+               
+               Log::info("producto actualizado",["product" => $wc_product->id]);
            }
 
            /**
