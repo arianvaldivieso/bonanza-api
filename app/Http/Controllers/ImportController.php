@@ -42,9 +42,9 @@ class ImportController extends Controller
 
        $this->token = $this->getToken();
 
-       for ($i=1; $i < 13; $i++) { 
+       for ($i=1; $i < 6; $i++) { 
 
-           $items = collect($this->getItems($i,200));
+           $items = collect($this->getItems($i,500));
 
 
            $products = $items->map(function($item){
@@ -90,9 +90,15 @@ class ImportController extends Controller
            foreach ($products as $key => $product) {
                $wc_product = $woocommerce->get('products?sku='.urlencode($product['sku']))[0];
 
-               $woocommerce->put('products/'.$wc_product->id, $product);
+               try {
+                   $woocommerce->put('products/'.$wc_product->id, $product);
+                   Log::info("producto actualizado",["product" => $wc_product->id]);
                
-               Log::info("producto actualizado",["product" => $wc_product->id]);
+               } catch (Exception $e) {
+                   Log::info("fallo del cliente");
+               }
+
+               
            }
 
            /**
