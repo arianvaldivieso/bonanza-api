@@ -1,0 +1,37 @@
+version: '3.5'
+
+services:
+  lumen:
+    image: arianvaldivieso/lumen
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/var/www/html
+      - /var/www/html/vendor/
+    build: .
+    command: php -S lumen:8000 -t public
+    restart: always
+
+  db:
+    image: mysql:8.0
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    volumes:
+       - db:/var/lib/mysql
+       - ./backup-database:/docker-entrypoint-initdb.d
+    environment:
+      MYSQL_ROOT_PASSWORD: "${DB_PASSWORD}"
+      MYSQL_DATABASE: "${DB_DATABASE}"
+      MYSQL_USER: "${DB_USERNAME}"
+      MYSQL_PASSWORD: "${DB_PASSWORD}"
+      MYSQL_RANDOM_ROOT_PASSWORD: '0'
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 3000:8080
+
+
+volumes:
+  db:
