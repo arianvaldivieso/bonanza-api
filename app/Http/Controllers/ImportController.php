@@ -31,115 +31,108 @@ class ImportController extends Controller
     public function importProduct(Request $request)
     {
 
-        $woocommerce = new Client(
+       $woocommerce = new Client(
             'https://wp-test.mydessk.com', 
-            'ck_3a001821c2326169ad5f3acfc6273c4c241c4b25', 
-            'cs_d6a21672e59ce2ca6e09745314568076e554d4f8',
+            'ck_68a868735b54e805c43cdbad3fe1ccc8e9412a9d', 
+            'cs_52945752439dc844cdd4a4b0c3e1d252e2757322',
             [
                 'version' => 'wc/v3',
             ]
-        );
-
+        ); 
 
        $this->token = $this->getToken();
 
+       for ($i=1; $i < 13; $i++) { 
 
-       $items = collect($this->getItems($request->page,100));
+           $items = collect($this->getItems($i,200));
 
-       $categories = [];
 
-       $products = $items->map(function($item) use ($woocommerce){
+           $products = $items->map(function($item){
 
-    
+                $data = [
+                    
+                    'name' => $item['title'],
+                    'description' => strip_tags($item['description'],'<ul><li><p><a>'),
+                    'sku' => ($item['sku'] == '') ? $item['title'] : $item['sku'] ,
+                    'regular_price' => $item['buyItNowPrice'],
+                    'sale_price' => $item['currentPrice'],
+                    'manage_stock' => true,
+                    'stock_quantity' => $item['quantity'],
+                    'images' => collect($item['pictureURL'])->map(function($image){return ['src' => $image];})->all(),
+                ];
 
-            $categories = [];
+                /**
 
-            $cat = explode(' >> ', $item['primaryCategory']['categoryName']);
-            $aux = 0;
-            foreach ($cat as $key => $c) {
+                $data = [
+                    'sku' => ($item['sku'] == '') ? $item['title'] : $item['sku'] ,
+                    'post_title' => $item['title'],
+                    'tax:product_cat' => implode('>', explode(' >> ', $item['primaryCategory']['categoryName']))
+                ];
 
-                $categories[] = ['name' => $c];
+                **/
 
-            }       
+                /**
 
-            $data = [
-                'type' => 'simple',
-                'status' => 'publish',
-                'name' => $item['title'],
-                'description' => $item['description'],
-                'sku' => ($item['sku'] == '') ? $item['title'] : $item['sku'] ,
-                'regular_price' => $item['buyItNowPrice'],
-                'sale_price' => $item['currentPrice'],
-                'manage_stock' => true,
-                'stock_quantity' => $item['quantity'],
-                'images' => collect($item['pictureURL'])->map(function($image){return ['src' => $image];})->all(),
-                //'categories' => $categories
-                //'tax:product_cat' => implode('>', explode(' >> ', $item['primaryCategory']['categoryName']))
-            ];
-
-            /**
-
-            if (isset($item['itemSpecifics'])) {
-                foreach ($item['itemSpecifics'] as $key => $value) {
-                    $data['meta: '.$value['nameValueList']['name']] = $value['nameValueList']['value']; 
+                if (isset($item['itemSpecifics'])) {
+                    foreach ($item['itemSpecifics'] as $key => $value) {
+                        $data['meta: '.$value['nameValueList']['name']] = $value['nameValueList']['value']; 
+                    }
                 }
+
+                **/
+
+                
+
+                return $data;
+
+            });
+
+           foreach ($products as $key => $product) {
+               $wc_product = $woocommerce->get('products?sku='.urlencode($product['sku']))[0];
+
+               $woocommerce->put('products/'.$wc_product->id, $product);
+           }
+
+           /**
+
+
+            $keys = collect([]);
+
+            foreach ($products as $key => $product) {
+                $keys = $keys->concat(array_keys($product));
             }
+
+            $keys = $keys->unique()->values()->all();
+
+
+            
+
+            $columns = $keys;
+
+            $products = $products->map(function($product) use ($keys){
+                foreach ($keys as $key) {
+                    if (!isset($product[$key])) {
+                        $product[$key] = '';
+                    }
+                }
+
+
+                return $product;
+
+            });
+
+            $fileName = 'products-page-'.$i.'-'.count($products).'.json';
+
+            $fp = fopen($fileName, 'w');
+            fwrite($fp, json_encode($products));
+            fclose($fp);
 
             **/
 
-
-
-            return $data;
-
-        });
-
-
-        foreach ($products as $key => $product) {
-
-            $product = $woocommerce->post('products', $product);
-    
         }
 
-        echo "<pre>";
-        print_r (count($products));
-        echo "</pre>";
+        
 
-        return false;
-
-
-        $keys = collect([]);
-
-        foreach ($products as $key => $product) {
-            $keys = $keys->concat(array_keys($product));
-        }
-
-        $keys = $keys->unique()->values()->all();
-
-
-        $fileName = 'products-page-'.$request->page.'.csv';
-
-        $headers = array(
-            "Content-type"        => "text/csv",
-            "Content-Disposition" => "attachment; filename=$fileName",
-            "Pragma"              => "no-cache",
-            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
-            "Expires"             => "0"
-        );
-
-        $columns = $keys;
-
-        $products = $products->map(function($product) use ($keys){
-            foreach ($keys as $key) {
-                if (!isset($product[$key])) {
-                    $product[$key] = '';
-                }
-            }
-
-            return $product;
-
-        });
-
-        return response()->json($products);
 
        
     }
